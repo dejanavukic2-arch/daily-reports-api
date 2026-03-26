@@ -1,4 +1,5 @@
 using DailyReports.Api.Data;
+using DailyReports.Api.Models;
 using Microsoft.EntityFrameworkCore;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -34,5 +35,34 @@ app.UseAuthorization();
 
 app.MapGet("/", () => "DailyReports API radi.");
 app.MapControllers();
+
+using (var scope = app.Services.CreateScope())
+{
+    var context = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+
+    context.Database.Migrate();
+
+    if (!context.Users.Any())
+    {
+        context.Users.AddRange(
+            new User
+            {
+                FullName = "Sladjan Pantic",
+                Email = "sladjan@vodomont.rs",
+                PasswordHash = "123456",
+                Role = "admin"
+            },
+            new User
+            {
+                FullName = "Marko Markovic",
+                Email = "marko@vodomont.rs",
+                PasswordHash = "123456",
+                Role = "worker"
+            }
+        );
+
+        context.SaveChanges();
+    }
+}
 
 app.Run();
