@@ -22,5 +22,19 @@ namespace DailyReports.Api.Controllers
             var users = await _context.Users.ToListAsync();
             return Ok(users);
         }
+
+        [HttpPost]
+        public async Task<ActionResult<User>> CreateUser(User user)
+        {
+            var existingUser = await _context.Users.FirstOrDefaultAsync(u => u.Email == user.Email);
+
+            if (existingUser != null)
+                return BadRequest("Korisnik sa tim emailom već postoji.");
+
+            _context.Users.Add(user);
+            await _context.SaveChangesAsync();
+
+            return Ok(user);
+        }
     }
 }
