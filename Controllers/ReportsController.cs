@@ -61,13 +61,13 @@ namespace DailyReports.Api.Controllers
         }
 
         [HttpPost]
-        public async Task<ActionResult> CreateReport(CreateReportDto dto)
+        public async Task<IActionResult> CreateReport(CreateReportDto dto)
         {
-            var userExists = await _context.Users.AnyAsync(u => u.Id == dto.UserId);
+            var user = await _context.Users.FindAsync(dto.UserId);
 
-            if (!userExists)
+            if (user == null)
             {
-                return BadRequest("User does not exist.");
+                return BadRequest("Korisnik ne postoji.");
             }
 
             var report = new Report
@@ -76,14 +76,14 @@ namespace DailyReports.Api.Controllers
                 Location = dto.Location,
                 Description = dto.Description,
                 UserId = dto.UserId,
-                CreatedAt = DateTime.Now,
+                CreatedAt = DateTime.UtcNow,
                 Comment = null
             };
 
             _context.Reports.Add(report);
             await _context.SaveChangesAsync();
 
-            return Ok(new { message = "Report created successfully." });
+            return Ok(report);
         }
 
         [HttpPut("{id}/comment")]
