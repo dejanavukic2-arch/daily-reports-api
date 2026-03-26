@@ -270,3 +270,6 @@ D:\projekti\vodoinstalaterska_app\DailyReports.Api\obj\Debug\net8.0\refint\Daily
 D:\projekti\vodoinstalaterska_app\DailyReports.Api\obj\Debug\net8.0\DailyReports.Api.pdb
 D:\projekti\vodoinstalaterska_app\DailyReports.Api\obj\Debug\net8.0\DailyReports.Api.genruntimeconfig.cache
 D:\projekti\vodoinstalaterska_app\DailyReports.Api\obj\Debug\net8.0\ref\DailyReports.Api.dll
+D:\projekti\vodoinstalaterska_app\DailyReports.Api\bin\Debug\net8.0\Npgsql.dll
+D:\projekti\vodoinstalaterska_app\DailyReports.Api\bin\Debug\net8.0\Npgsql.EntityFrameworkCore.PostgreSQL.dll
+D:\projekti\vodoinstalaterska_app\DailyReports.Api\obj\Debug\net8.0\DailyReports.Api.sourcelink.json
