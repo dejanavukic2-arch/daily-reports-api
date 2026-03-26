@@ -17,15 +17,18 @@ namespace DailyReports.Api.Controllers
         }
 
         [HttpPost("login")]
-        public async Task<ActionResult> Login(LoginDto dto)
+        public async Task<IActionResult> Login(LoginDto dto)
         {
             var user = await _context.Users
-                .FirstOrDefaultAsync(u => u.Email == dto.Email && u.PasswordHash == dto.Password);
+                .FirstOrDefaultAsync(u => u.Email == dto.Email);
 
             if (user == null)
-            {
                 return Unauthorized("Pogrešan email ili lozinka.");
-            }
+
+            var passwordOk = BCrypt.Net.BCrypt.Verify(dto.Password, user.PasswordHash);
+
+            if (!passwordOk)
+                return Unauthorized("Pogrešan email ili lozinka.");
 
             return Ok(new
             {

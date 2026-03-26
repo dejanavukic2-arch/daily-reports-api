@@ -4,9 +4,9 @@ namespace DailyReports.Api.Models
     {
         public int Id { get; set; }
         public DateTime ReportDate { get; set; }
-        public string Location { get; set; } = string.Empty;
-        public string Description { get; set; } = string.Empty;
-        public DateTime CreatedAt { get; set; }
+        public string Location { get; set; } = "";
+        public string Description { get; set; } = "";
+        public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
         public int UserId { get; set; }
         public string? Comment { get; set; }
 

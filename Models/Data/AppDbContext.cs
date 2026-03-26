@@ -9,7 +9,21 @@ namespace DailyReports.Api.Data
         {
         }
 
-        public DbSet<User> Users { get; set; }
-        public DbSet<Report> Reports { get; set; }
+        public DbSet<User> Users => Set<User>();
+        public DbSet<Report> Reports => Set<Report>();
+
+        protected override void OnModelCreating(ModelBuilder modelBuilder)
+        {
+            base.OnModelCreating(modelBuilder);
+
+            modelBuilder.Entity<User>()
+                .HasIndex(u => u.Email)
+                .IsUnique();
+
+            modelBuilder.Entity<Report>()
+                .HasOne(r => r.User)
+                .WithMany(u => u.Reports)
+                .HasForeignKey(r => r.UserId);
+        }
     }
 }

@@ -1,11 +1,12 @@
 {
   "version": 2,
-  "dgSpecHash": "2DjQSLIICHA=",
+  "dgSpecHash": "kWjmdWSxNBc=",
   "success": true,
   "projectFilePath": "D:\\projekti\\vodoinstalaterska_app\\DailyReports.Api\\DailyReports.Api.csproj",
   "expectedPackageFiles": [
     "C:\\Users\\Dejana\\.nuget\\packages\\azure.core\\1.25.0\\azure.core.1.25.0.nupkg.sha512",
     "C:\\Users\\Dejana\\.nuget\\packages\\azure.identity\\1.7.0\\azure.identity.1.7.0.nupkg.sha512",
+    "C:\\Users\\Dejana\\.nuget\\packages\\bcrypt.net-next\\4.1.0\\bcrypt.net-next.4.1.0.nupkg.sha512",
     "C:\\Users\\Dejana\\.nuget\\packages\\humanizer.core\\2.14.1\\humanizer.core.2.14.1.nupkg.sha512",
     "C:\\Users\\Dejana\\.nuget\\packages\\microsoft.bcl.asyncinterfaces\\6.0.0\\microsoft.bcl.asyncinterfaces.6.0.0.nupkg.sha512",
     "C:\\Users\\Dejana\\.nuget\\packages\\microsoft.codeanalysis.analyzers\\3.3.3\\microsoft.codeanalysis.analyzers.3.3.3.nupkg.sha512",

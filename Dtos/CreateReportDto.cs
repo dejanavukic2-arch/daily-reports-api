@@ -1,10 +1,10 @@
 namespace DailyReports.Api.Dtos
 {
-    public class CreateReportDto
+    public class CreateUserDto
     {
-        public DateTime ReportDate { get; set; }
-        public string Location { get; set; } = string.Empty;
-        public string Description { get; set; } = string.Empty;
-        public int UserId { get; set; }
+        public string FullName { get; set; } = "";
+        public string Email { get; set; } = "";
+        public string Password { get; set; } = "";
+        public string Role { get; set; } = "worker";
     }
 }
