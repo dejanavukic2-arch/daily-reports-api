@@ -1,0 +1,11 @@
+{
+  "Version": 1,
+  "Hash": "6uoGF1g9mKhYI3iol6WSvaAGHpHLu6iEZTz7bt3cxAs=",
+  "Source": "DailyReports.Api",
+  "BasePath": "_content/DailyReports.Api",
+  "Mode": "Default",
+  "ManifestType": "Build",
+  "ReferencedProjectsConfiguration": [],
+  "DiscoveryPatterns": [],
+  "Assets": []
+}
