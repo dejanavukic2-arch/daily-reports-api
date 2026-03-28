@@ -9,7 +9,6 @@ namespace DailyReports.Api.Models
         public string Email { get; set; } = "";
         public string PasswordHash { get; set; } = "";
         public string Role { get; set; } = "worker";
-        public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 
         public List<Report> Reports { get; set; } = new();
     }
