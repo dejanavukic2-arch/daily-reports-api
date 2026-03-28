@@ -17,51 +17,41 @@ namespace DailyReports.Api.Controllers
             _context = context;
         }
 
-        [HttpPost("register")]
-        public async Task<IActionResult> Register(RegisterDto dto)
+       [HttpPost("register")]
+public async Task<IActionResult> Register(RegisterDto dto)
+{
+    try
+    {
+        if (dto.Password != dto.ConfirmPassword)
+            return BadRequest("Lozinke se ne poklapaju.");
+
+        if (dto.Password.Length < 8)
+            return BadRequest("Lozinka mora imati minimum 8 karaktera.");
+
+        var existingUser = await _context.Users
+            .FirstOrDefaultAsync(x => x.Email == dto.Email);
+
+        if (existingUser != null)
+            return BadRequest("Korisnik već postoji.");
+
+        var user = new User
         {
-            var email = dto.Email.Trim().ToLower();
+            FullName = dto.FirstName + " " + dto.LastName,
+            Email = dto.Email,
+            PasswordHash = BCrypt.Net.BCrypt.HashPassword(dto.Password),
+            Role = dto.Role
+        };
 
-            if (string.IsNullOrWhiteSpace(dto.FirstName) || string.IsNullOrWhiteSpace(dto.LastName))
-                return BadRequest("Ime i prezime su obavezni.");
+        _context.Users.Add(user);
+        await _context.SaveChangesAsync();
 
-            if (string.IsNullOrWhiteSpace(email))
-                return BadRequest("Email je obavezan.");
-
-            if (dto.Password.Length < 8)
-                return BadRequest("Lozinka mora imati najmanje 8 karaktera.");
-
-            if (dto.Password != dto.ConfirmPassword)
-                return BadRequest("Lozinke se ne poklapaju.");
-
-            var existingUser = await _context.Users.FirstOrDefaultAsync(x => x.Email == email);
-            if (existingUser != null)
-                return BadRequest("Korisnik sa tim emailom već postoji.");
-
-            var role = dto.Role.Trim().ToLower();
-            if (role != "admin" && role != "worker")
-                role = "worker";
-
-            var user = new User
-            {
-                FirstName = dto.FirstName.Trim(),
-                LastName = dto.LastName.Trim(),
-                Email = email,
-                PasswordHash = BCrypt.Net.BCrypt.HashPassword(dto.Password),
-                Role = role
-            };
-
-            _context.Users.Add(user);
-            await _context.SaveChangesAsync();
-
-            return Ok(new
-            {
-                user.Id,
-                fullName = $"{user.FirstName} {user.LastName}",
-                user.Email,
-                user.Role
-            });
-        }
+        return Ok("Uspešna registracija.");
+    }
+    catch (Exception ex)
+    {
+        return StatusCode(500, ex.Message);
+    }
+}
 
         [HttpPost("login")]
         public async Task<IActionResult> Login(LoginDto dto)
