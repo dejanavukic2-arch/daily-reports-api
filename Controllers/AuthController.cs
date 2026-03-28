@@ -1,5 +1,6 @@
 using DailyReports.Api.Data;
 using DailyReports.Api.Dtos;
+using DailyReports.Api.Models;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 
@@ -16,27 +17,97 @@ namespace DailyReports.Api.Controllers
             _context = context;
         }
 
+        [HttpPost("register")]
+        public async Task<IActionResult> Register(RegisterDto dto)
+        {
+            var email = dto.Email.Trim().ToLower();
+
+            if (string.IsNullOrWhiteSpace(dto.FirstName) || string.IsNullOrWhiteSpace(dto.LastName))
+                return BadRequest("Ime i prezime su obavezni.");
+
+            if (string.IsNullOrWhiteSpace(email))
+                return BadRequest("Email je obavezan.");
+
+            if (dto.Password.Length < 8)
+                return BadRequest("Lozinka mora imati najmanje 8 karaktera.");
+
+            if (dto.Password != dto.ConfirmPassword)
+                return BadRequest("Lozinke se ne poklapaju.");
+
+            var existingUser = await _context.Users.FirstOrDefaultAsync(x => x.Email == email);
+            if (existingUser != null)
+                return BadRequest("Korisnik sa tim emailom već postoji.");
+
+            var role = dto.Role.Trim().ToLower();
+            if (role != "admin" && role != "worker")
+                role = "worker";
+
+            var user = new User
+            {
+                FirstName = dto.FirstName.Trim(),
+                LastName = dto.LastName.Trim(),
+                Email = email,
+                PasswordHash = BCrypt.Net.BCrypt.HashPassword(dto.Password),
+                Role = role
+            };
+
+            _context.Users.Add(user);
+            await _context.SaveChangesAsync();
+
+            return Ok(new
+            {
+                user.Id,
+                fullName = $"{user.FirstName} {user.LastName}",
+                user.Email,
+                user.Role
+            });
+        }
+
         [HttpPost("login")]
         public async Task<IActionResult> Login(LoginDto dto)
         {
-            var user = await _context.Users
-                .FirstOrDefaultAsync(u => u.Email == dto.Email);
+            var email = dto.Email.Trim().ToLower();
 
+            var user = await _context.Users.FirstOrDefaultAsync(x => x.Email == email);
             if (user == null)
                 return Unauthorized("Pogrešan email ili lozinka.");
 
-            var passwordOk = BCrypt.Net.BCrypt.Verify(dto.Password, user.PasswordHash);
-
-            if (!passwordOk)
+            var validPassword = BCrypt.Net.BCrypt.Verify(dto.Password, user.PasswordHash);
+            if (!validPassword)
                 return Unauthorized("Pogrešan email ili lozinka.");
 
             return Ok(new
             {
-                id = user.Id,
-                fullName = user.FullName,
-                email = user.Email,
-                role = user.Role
+                user.Id,
+                fullName = $"{user.FirstName} {user.LastName}",
+                user.Email,
+                user.Role
             });
+        }
+
+        [HttpPost("change-password")]
+        public async Task<IActionResult> ChangePassword(ChangePasswordDto dto)
+        {
+            var email = dto.Email.Trim().ToLower();
+
+            var user = await _context.Users.FirstOrDefaultAsync(x => x.Email == email);
+            if (user == null)
+                return NotFound("Korisnik ne postoji.");
+
+            var validPassword = BCrypt.Net.BCrypt.Verify(dto.CurrentPassword, user.PasswordHash);
+            if (!validPassword)
+                return BadRequest("Trenutna lozinka nije ispravna.");
+
+            if (dto.NewPassword.Length < 8)
+                return BadRequest("Nova lozinka mora imati najmanje 8 karaktera.");
+
+            if (dto.NewPassword != dto.ConfirmNewPassword)
+                return BadRequest("Nove lozinke se ne poklapaju.");
+
+            user.PasswordHash = BCrypt.Net.BCrypt.HashPassword(dto.NewPassword);
+            await _context.SaveChangesAsync();
+
+            return Ok("Lozinka je uspešno promenjena.");
         }
     }
 }

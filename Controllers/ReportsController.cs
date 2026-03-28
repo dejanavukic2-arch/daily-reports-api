@@ -18,20 +18,48 @@ namespace DailyReports.Api.Controllers
         }
 
         [HttpGet]
-        public async Task<ActionResult<List<ReportDto>>> GetReports()
+        public async Task<ActionResult<List<ReportDto>>> GetReports(
+            [FromQuery] DateTime? from,
+            [FromQuery] DateTime? to,
+            [FromQuery] int? userId,
+            [FromQuery] string? status)
         {
-            var reports = await _context.Reports
+            var query = _context.Reports
                 .Include(r => r.User)
-                .OrderByDescending(r => r.CreatedAt)
+                .AsQueryable();
+
+            if (from.HasValue)
+                query = query.Where(r => r.ReportDate.Date >= from.Value.Date);
+
+            if (to.HasValue)
+                query = query.Where(r => r.ReportDate.Date <= to.Value.Date);
+
+            if (userId.HasValue)
+                query = query.Where(r => r.UserId == userId.Value);
+
+            if (!string.IsNullOrWhiteSpace(status))
+            {
+                var statusLower = status.Trim().ToLower();
+                query = query.Where(r => r.Status.ToLower() == statusLower);
+            }
+
+            var reports = await query
+                .OrderByDescending(r => r.ReportDate)
+                .ThenByDescending(r => r.CreatedAt)
                 .Select(r => new ReportDto
                 {
                     Id = r.Id,
                     ReportDate = r.ReportDate,
                     Location = r.Location,
                     Description = r.Description,
+                    Status = r.Status,
+                    Comment = r.Comment,
+                    WorkerName = r.User != null ? r.User.FirstName + " " + r.User.LastName : "",
+                    WorkerEmail = r.User != null ? r.User.Email : "",
                     UserId = r.UserId,
-                    WorkerName = r.User != null ? r.User.FullName : "",
-                    Comment = r.Comment
+                    CreatedAt = r.CreatedAt,
+                    ImageBase64 = r.ImageBase64,
+                    ImageMimeType = r.ImageMimeType
                 })
                 .ToListAsync();
 
@@ -39,21 +67,27 @@ namespace DailyReports.Api.Controllers
         }
 
         [HttpGet("user/{userId}")]
-        public async Task<ActionResult<List<ReportDto>>> GetReportsByUser(int userId)
+        public async Task<ActionResult<List<ReportDto>>> GetReportsForUser(int userId)
         {
             var reports = await _context.Reports
-                .Where(r => r.UserId == userId)
                 .Include(r => r.User)
-                .OrderByDescending(r => r.CreatedAt)
+                .Where(r => r.UserId == userId)
+                .OrderByDescending(r => r.ReportDate)
+                .ThenByDescending(r => r.CreatedAt)
                 .Select(r => new ReportDto
                 {
                     Id = r.Id,
                     ReportDate = r.ReportDate,
                     Location = r.Location,
                     Description = r.Description,
+                    Status = r.Status,
+                    Comment = r.Comment,
+                    WorkerName = r.User != null ? r.User.FirstName + " " + r.User.LastName : "",
+                    WorkerEmail = r.User != null ? r.User.Email : "",
                     UserId = r.UserId,
-                    WorkerName = r.User != null ? r.User.FullName : "",
-                    Comment = r.Comment
+                    CreatedAt = r.CreatedAt,
+                    ImageBase64 = r.ImageBase64,
+                    ImageMimeType = r.ImageMimeType
                 })
                 .ToListAsync();
 
@@ -63,43 +97,77 @@ namespace DailyReports.Api.Controllers
         [HttpPost]
         public async Task<IActionResult> CreateReport(CreateReportDto dto)
         {
-            var user = await _context.Users.FindAsync(dto.UserId);
-
+            var user = await _context.Users.FirstOrDefaultAsync(x => x.Id == dto.UserId);
             if (user == null)
-            {
                 return BadRequest("Korisnik ne postoji.");
-            }
 
             var report = new Report
             {
                 ReportDate = dto.ReportDate,
-                Location = dto.Location,
-                Description = dto.Description,
+                Location = dto.Location.Trim(),
+                Description = dto.Description.Trim(),
                 UserId = dto.UserId,
-                CreatedAt = DateTime.UtcNow,
-                Comment = null
+                Status = "na cekanju",
+                ImageBase64 = dto.ImageBase64,
+                ImageMimeType = dto.ImageMimeType
             };
 
             _context.Reports.Add(report);
             await _context.SaveChangesAsync();
 
-            return Ok(report);
+            var result = await _context.Reports
+                .Include(r => r.User)
+                .Where(r => r.Id == report.Id)
+                .Select(r => new ReportDto
+                {
+                    Id = r.Id,
+                    ReportDate = r.ReportDate,
+                    Location = r.Location,
+                    Description = r.Description,
+                    Status = r.Status,
+                    Comment = r.Comment,
+                    WorkerName = r.User != null ? r.User.FirstName + " " + r.User.LastName : "",
+                    WorkerEmail = r.User != null ? r.User.Email : "",
+                    UserId = r.UserId,
+                    CreatedAt = r.CreatedAt,
+                    ImageBase64 = r.ImageBase64,
+                    ImageMimeType = r.ImageMimeType
+                })
+                .FirstAsync();
+
+            return Ok(result);
         }
 
         [HttpPut("{id}/comment")]
-        public async Task<ActionResult> UpdateComment(int id, UpdateCommentDto dto)
+        public async Task<IActionResult> UpdateComment(int id, UpdateCommentDto dto)
         {
-            var report = await _context.Reports.FindAsync(id);
-
+            var report = await _context.Reports.FirstOrDefaultAsync(x => x.Id == id);
             if (report == null)
-            {
-                return NotFound("Report not found.");
-            }
+                return NotFound("Izveštaj ne postoji.");
 
-            report.Comment = dto.Comment;
+            report.Comment = dto.Comment?.Trim();
             await _context.SaveChangesAsync();
 
-            return Ok(new { message = "Comment saved successfully." });
+            return Ok("Komentar je sačuvan.");
+        }
+
+        [HttpPut("{id}/status")]
+        public async Task<IActionResult> UpdateStatus(int id, UpdateStatusDto dto)
+        {
+            var report = await _context.Reports.FirstOrDefaultAsync(x => x.Id == id);
+            if (report == null)
+                return NotFound("Izveštaj ne postoji.");
+
+            var allowed = new[] { "na cekanju", "pregledano", "zavrseno" };
+            var status = dto.Status.Trim().ToLower();
+
+            if (!allowed.Contains(status))
+                return BadRequest("Neispravan status.");
+
+            report.Status = status;
+            await _context.SaveChangesAsync();
+
+            return Ok("Status je sačuvan.");
         }
     }
 }
