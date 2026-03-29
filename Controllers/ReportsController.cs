@@ -18,48 +18,21 @@ namespace DailyReports.Api.Controllers
         }
 
         [HttpGet]
-        public async Task<ActionResult<List<ReportDto>>> GetReports(
-            [FromQuery] DateTime? from,
-            [FromQuery] DateTime? to,
-            [FromQuery] int? userId,
-            [FromQuery] string? status)
+        public async Task<ActionResult<List<ReportDto>>> GetReports()
         {
-            var query = _context.Reports
+            var reports = await _context.Reports
                 .Include(r => r.User)
-                .AsQueryable();
-
-            if (from.HasValue)
-                query = query.Where(r => r.ReportDate.Date >= from.Value.Date);
-
-            if (to.HasValue)
-                query = query.Where(r => r.ReportDate.Date <= to.Value.Date);
-
-            if (userId.HasValue)
-                query = query.Where(r => r.UserId == userId.Value);
-
-            if (!string.IsNullOrWhiteSpace(status))
-            {
-                var statusLower = status.Trim().ToLower();
-                query = query.Where(r => r.Status.ToLower() == statusLower);
-            }
-
-            var reports = await query
                 .OrderByDescending(r => r.ReportDate)
-                .ThenByDescending(r => r.CreatedAt)
+                .ThenByDescending(r => r.Id)
                 .Select(r => new ReportDto
                 {
                     Id = r.Id,
                     ReportDate = r.ReportDate,
                     Location = r.Location,
                     Description = r.Description,
-                    Status = r.Status,
-                    Comment = r.Comment,
                     WorkerName = r.User != null ? r.User.FullName : "",
-                    WorkerEmail = r.User != null ? r.User.Email : "",
-                    UserId = r.UserId,
-                    CreatedAt = r.CreatedAt,
-                    ImageBase64 = r.ImageBase64,
-                    ImageMimeType = r.ImageMimeType
+                    Comment = r.Comment,
+                    UserId = r.UserId
                 })
                 .ToListAsync();
 
@@ -67,27 +40,22 @@ namespace DailyReports.Api.Controllers
         }
 
         [HttpGet("user/{userId}")]
-        public async Task<ActionResult<List<ReportDto>>> GetReportsForUser(int userId)
+        public async Task<ActionResult<List<ReportDto>>> GetReportsByUser(int userId)
         {
             var reports = await _context.Reports
                 .Include(r => r.User)
                 .Where(r => r.UserId == userId)
                 .OrderByDescending(r => r.ReportDate)
-                .ThenByDescending(r => r.CreatedAt)
+                .ThenByDescending(r => r.Id)
                 .Select(r => new ReportDto
                 {
                     Id = r.Id,
                     ReportDate = r.ReportDate,
                     Location = r.Location,
                     Description = r.Description,
-                    Status = r.Status,
-                    Comment = r.Comment,
                     WorkerName = r.User != null ? r.User.FullName : "",
-                    WorkerEmail = r.User != null ? r.User.Email : "",
-                    UserId = r.UserId,
-                    CreatedAt = r.CreatedAt,
-                    ImageBase64 = r.ImageBase64,
-                    ImageMimeType = r.ImageMimeType
+                    Comment = r.Comment,
+                    UserId = r.UserId
                 })
                 .ToListAsync();
 
@@ -97,77 +65,67 @@ namespace DailyReports.Api.Controllers
         [HttpPost]
         public async Task<IActionResult> CreateReport(CreateReportDto dto)
         {
-            var user = await _context.Users.FirstOrDefaultAsync(x => x.Id == dto.UserId);
-            if (user == null)
-                return BadRequest("Korisnik ne postoji.");
-
-            var report = new Report
+            try
             {
-                ReportDate = dto.ReportDate,
-                Location = dto.Location.Trim(),
-                Description = dto.Description.Trim(),
-                UserId = dto.UserId,
-                Status = "na cekanju",
-                ImageBase64 = dto.ImageBase64,
-                ImageMimeType = dto.ImageMimeType
-            };
+                var user = await _context.Users.FirstOrDefaultAsync(x => x.Id == dto.UserId);
 
-            _context.Reports.Add(report);
-            await _context.SaveChangesAsync();
+                if (user == null)
+                    return BadRequest("Korisnik ne postoji.");
 
-            var result = await _context.Reports
-                .Include(r => r.User)
-                .Where(r => r.Id == report.Id)
-                .Select(r => new ReportDto
+                var report = new Report
                 {
-                    Id = r.Id,
-                    ReportDate = r.ReportDate,
-                    Location = r.Location,
-                    Description = r.Description,
-                    Status = r.Status,
-                    Comment = r.Comment,
-                    WorkerName = r.User != null ? r.User.FullName : "",
-                    WorkerEmail = r.User != null ? r.User.Email : "",
-                    UserId = r.UserId,
-                    CreatedAt = r.CreatedAt,
-                    ImageBase64 = r.ImageBase64,
-                    ImageMimeType = r.ImageMimeType
-                })
-                .FirstAsync();
+                    ReportDate = dto.ReportDate,
+                    Location = dto.Location.Trim(),
+                    Description = dto.Description.Trim(),
+                    UserId = dto.UserId,
+                    Comment = null
+                };
 
-            return Ok(result);
+                _context.Reports.Add(report);
+                await _context.SaveChangesAsync();
+
+                var createdReport = await _context.Reports
+                    .Include(r => r.User)
+                    .Where(r => r.Id == report.Id)
+                    .Select(r => new ReportDto
+                    {
+                        Id = r.Id,
+                        ReportDate = r.ReportDate,
+                        Location = r.Location,
+                        Description = r.Description,
+                        WorkerName = r.User != null ? r.User.FullName : "",
+                        Comment = r.Comment,
+                        UserId = r.UserId
+                    })
+                    .FirstAsync();
+
+                return Ok(createdReport);
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, $"Greška na serveru: {ex.Message}");
+            }
         }
 
         [HttpPut("{id}/comment")]
         public async Task<IActionResult> UpdateComment(int id, UpdateCommentDto dto)
         {
-            var report = await _context.Reports.FirstOrDefaultAsync(x => x.Id == id);
-            if (report == null)
-                return NotFound("Izveštaj ne postoji.");
+            try
+            {
+                var report = await _context.Reports.FirstOrDefaultAsync(x => x.Id == id);
 
-            report.Comment = dto.Comment?.Trim();
-            await _context.SaveChangesAsync();
+                if (report == null)
+                    return NotFound("Izveštaj ne postoji.");
 
-            return Ok("Komentar je sačuvan.");
-        }
+                report.Comment = dto.Comment?.Trim();
+                await _context.SaveChangesAsync();
 
-        [HttpPut("{id}/status")]
-        public async Task<IActionResult> UpdateStatus(int id, UpdateStatusDto dto)
-        {
-            var report = await _context.Reports.FirstOrDefaultAsync(x => x.Id == id);
-            if (report == null)
-                return NotFound("Izveštaj ne postoji.");
-
-            var allowed = new[] { "na cekanju", "pregledano", "zavrseno" };
-            var status = dto.Status.Trim().ToLower();
-
-            if (!allowed.Contains(status))
-                return BadRequest("Neispravan status.");
-
-            report.Status = status;
-            await _context.SaveChangesAsync();
-
-            return Ok("Status je sačuvan.");
+                return Ok("Komentar je uspešno sačuvan.");
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, $"Greška na serveru: {ex.Message}");
+            }
         }
     }
 }
