@@ -24,17 +24,12 @@ builder.Services.AddCors(options =>
 
 var app = builder.Build();
 
-app.UseCors("AllowFrontend");
-
 app.UseSwagger();
 app.UseSwaggerUI();
 
-var port = Environment.GetEnviromentVariable("PORT") ?? "8080";
+var port = Environment.GetEnviromentVariable("PORT");
+if (!string.IsNullOrEmpty(port))
+{
 app.Urls.Add($"http://*:{port}");
-
-app.UseAuthorization();
-
-app.MapGet("/", () => "DailyReports API radi.");
-app.MapControllers();
-
+}
 app.Run();
