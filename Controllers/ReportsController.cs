@@ -67,10 +67,19 @@ namespace DailyReports.Api.Controllers
         {
             try
             {
+                if (dto.UserId <= 0)
+                    return BadRequest("UserId nije ispravan.");
+
+                if (string.IsNullOrWhiteSpace(dto.Location))
+                    return BadRequest("Lokacija je obavezna.");
+
+                if (string.IsNullOrWhiteSpace(dto.Description))
+                    return BadRequest("Opis je obavezan.");
+
                 var user = await _context.Users.FirstOrDefaultAsync(x => x.Id == dto.UserId);
 
                 if (user == null)
-                    return BadRequest("Korisnik ne postoji.");
+                    return BadRequest($"Korisnik sa ID {dto.UserId} ne postoji.");
 
                 var report = new Report
                 {
@@ -103,7 +112,7 @@ namespace DailyReports.Api.Controllers
             }
             catch (Exception ex)
             {
-                return StatusCode(500, $"Greška na serveru: {ex.Message}");
+                return StatusCode(500, $"Greška na serveru: {ex.InnerException?.Message ?? ex.Message}");
             }
         }
 
@@ -124,7 +133,7 @@ namespace DailyReports.Api.Controllers
             }
             catch (Exception ex)
             {
-                return StatusCode(500, $"Greška na serveru: {ex.Message}");
+                return StatusCode(500, $"Greška na serveru: {ex.InnerException?.Message ?? ex.Message}");
             }
         }
     }
