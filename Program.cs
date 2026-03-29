@@ -1,6 +1,8 @@
 using DailyReports.Api.Data;
 using Microsoft.EntityFrameworkCore;
 
+App.Context.SetSwitch("Npgsql.EnableLegacyTimestampBehavior", true);
+
 var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddControllers();
