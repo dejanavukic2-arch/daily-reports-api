@@ -29,6 +29,9 @@ app.UseCors("AllowFrontend");
 app.UseSwagger();
 app.UseSwaggerUI();
 
+var port = Environment.GetEnviromentVariable("PORT") ?? "8080";
+app.Urls.Add($"http://*:{port}");
+
 app.UseAuthorization();
 
 app.MapGet("/", () => "DailyReports API radi.");
