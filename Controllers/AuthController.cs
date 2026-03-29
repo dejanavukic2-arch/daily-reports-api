@@ -22,30 +22,31 @@ namespace DailyReports.Api.Controllers
         {
             try
             {
-                if (string.IsNullOrWhiteSpace(dto.FirstName) || string.IsNullOrWhiteSpace(dto.LastName))
+                if (string.IsNullOrWhiteSpace(dto.FullName))
                     return BadRequest("Ime i prezime su obavezni.");
 
                 if (string.IsNullOrWhiteSpace(dto.Email))
                     return BadRequest("Email je obavezan.");
 
-                if (dto.Password != dto.ConfirmPassword)
-                    return BadRequest("Lozinke se ne poklapaju.");
+                if (string.IsNullOrWhiteSpace(dto.Password))
+                    return BadRequest("Lozinka je obavezna.");
 
                 if (dto.Password.Length < 8)
                     return BadRequest("Lozinka mora imati najmanje 8 karaktera.");
 
+                if (dto.Password != dto.ConfirmPassword)
+                    return BadRequest("Lozinke se ne poklapaju.");
+
                 var email = dto.Email.Trim().ToLower();
+                var role = dto.Role?.Trim().ToLower() == "admin" ? "admin" : "worker";
 
                 var existingUser = await _context.Users.FirstOrDefaultAsync(x => x.Email == email);
                 if (existingUser != null)
                     return BadRequest("Korisnik već postoji.");
 
-                var role = dto.Role?.Trim().ToLower() == "admin" ? "admin" : "worker";
-
                 var user = new User
                 {
-                    FirstName = dto.FirstName.Trim(),
-                    LastName = dto.LastName.Trim(),
+                    FullName = dto.FullName.Trim(),
                     Email = email,
                     PasswordHash = BCrypt.Net.BCrypt.HashPassword(dto.Password),
                     Role = role
@@ -56,15 +57,15 @@ namespace DailyReports.Api.Controllers
 
                 return Ok(new
                 {
-                    user.Id,
-                    fullName = user.FirstName + " " + user.LastName,
-                    user.Email,
-                    user.Role
+                    id = user.Id,
+                    fullName = user.FullName,
+                    email = user.Email,
+                    role = user.Role
                 });
             }
             catch (Exception ex)
             {
-                return StatusCode(500, ex.Message);
+                return StatusCode(500, $"Greška na serveru: {ex.Message}");
             }
         }
 
@@ -73,27 +74,30 @@ namespace DailyReports.Api.Controllers
         {
             try
             {
+                if (string.IsNullOrWhiteSpace(dto.Email) || string.IsNullOrWhiteSpace(dto.Password))
+                    return BadRequest("Email i lozinka su obavezni.");
+
                 var email = dto.Email.Trim().ToLower();
 
                 var user = await _context.Users.FirstOrDefaultAsync(x => x.Email == email);
                 if (user == null)
                     return Unauthorized("Pogrešan email ili lozinka.");
 
-                var validPassword = BCrypt.Net.BCrypt.Verify(dto.Password, user.PasswordHash);
-                if (!validPassword)
+                var isValidPassword = BCrypt.Net.BCrypt.Verify(dto.Password, user.PasswordHash);
+                if (!isValidPassword)
                     return Unauthorized("Pogrešan email ili lozinka.");
 
                 return Ok(new
                 {
-                    user.Id,
-                    fullName = user.FirstName + " " + user.LastName,
-                    user.Email,
-                    user.Role
+                    id = user.Id,
+                    fullName = user.FullName,
+                    email = user.Email,
+                    role = user.Role
                 });
             }
             catch (Exception ex)
             {
-                return StatusCode(500, ex.Message);
+                return StatusCode(500, $"Greška na serveru: {ex.Message}");
             }
         }
 
@@ -102,21 +106,30 @@ namespace DailyReports.Api.Controllers
         {
             try
             {
-                var email = dto.Email.Trim().ToLower();
+                if (string.IsNullOrWhiteSpace(dto.Email))
+                    return BadRequest("Email je obavezan.");
 
-                var user = await _context.Users.FirstOrDefaultAsync(x => x.Email == email);
-                if (user == null)
-                    return NotFound("Korisnik ne postoji.");
+                if (string.IsNullOrWhiteSpace(dto.CurrentPassword))
+                    return BadRequest("Trenutna lozinka je obavezna.");
 
-                var validPassword = BCrypt.Net.BCrypt.Verify(dto.CurrentPassword, user.PasswordHash);
-                if (!validPassword)
-                    return BadRequest("Trenutna lozinka nije ispravna.");
+                if (string.IsNullOrWhiteSpace(dto.NewPassword))
+                    return BadRequest("Nova lozinka je obavezna.");
 
                 if (dto.NewPassword.Length < 8)
                     return BadRequest("Nova lozinka mora imati najmanje 8 karaktera.");
 
                 if (dto.NewPassword != dto.ConfirmNewPassword)
                     return BadRequest("Nove lozinke se ne poklapaju.");
+
+                var email = dto.Email.Trim().ToLower();
+
+                var user = await _context.Users.FirstOrDefaultAsync(x => x.Email == email);
+                if (user == null)
+                    return NotFound("Korisnik ne postoji.");
+
+                var isValidPassword = BCrypt.Net.BCrypt.Verify(dto.CurrentPassword, user.PasswordHash);
+                if (!isValidPassword)
+                    return BadRequest("Trenutna lozinka nije ispravna.");
 
                 user.PasswordHash = BCrypt.Net.BCrypt.HashPassword(dto.NewPassword);
                 await _context.SaveChangesAsync();
@@ -125,7 +138,7 @@ namespace DailyReports.Api.Controllers
             }
             catch (Exception ex)
             {
-                return StatusCode(500, ex.Message);
+                return StatusCode(500, $"Greška na serveru: {ex.Message}");
             }
         }
     }

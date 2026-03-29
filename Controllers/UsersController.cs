@@ -20,12 +20,12 @@ namespace DailyReports.Api.Controllers
         public async Task<ActionResult<List<UserListDto>>> GetUsers()
         {
             var users = await _context.Users
-                .OrderBy(x => x.FirstName)
-                .ThenBy(x => x.LastName)
+                .OrderBy(x => x.FullName)
+                .ThenBy(x => x.FullName)
                 .Select(x => new UserListDto
                 {
                     Id = x.Id,
-                    FullName = x.FirstName + " " + x.LastName,
+                    FullName = x.FullName,
                     Email = x.Email,
                     Role = x.Role
                 })
